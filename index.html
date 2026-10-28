@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>網頁服務錯誤狀況與處理方式</title>
+<meta name="description" content="23 種網頁服務錯誤狀況的清單、處理層級與可互動的 UI 模擬。">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#F5F6F8;color:#1F2328;font-family:Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;font-size:14px;line-height:1.5}
+a{color:#1F5FD1}a:hover{color:#174CB0}
+p,h1,h2,h3,ul{margin:0}
+code,.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding:0 24px;background:#FFFFFF;border-bottom:1px solid #DCDFE4}
+.top-title{font-weight:700;font-size:15px;padding:12px 0}
+.tabs{display:flex;gap:24px;align-self:stretch}
+.tab{position:relative;display:flex;align-items:center;height:48px;padding:0;border:0;background:none;font:inherit;font-weight:500;color:#57606A;cursor:pointer;text-decoration:none}
+.tab:hover{color:#1F2328}
+.tab[aria-selected="true"]{color:#1F2328}
+.tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:#1F5FD1}
+
+/* buttons & fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:4px;border:1px solid #CDD1D7;background:#FFFFFF;color:#1F2328;font-family:inherit;font-size:14px;font-weight:500;line-height:1;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:#1F5FD1;color:#1F5FD1}
+.btn-p{background:#1F5FD1;border-color:#1F5FD1;color:#FFFFFF}
+.btn-p:hover{background:#174CB0;border-color:#174CB0;color:#FFFFFF}
+.btn-d{color:#B42318}.btn-d:hover{border-color:#B42318;color:#8E1B12}
+.btn-t{background:transparent;border-color:transparent}
+.btn-t:hover{background:#EEF0F3;border-color:transparent;color:#1F2328}
+.btn-sm{height:28px;padding:0 10px}
+.btn-i{width:32px;padding:0}.btn-sm.btn-i{width:28px}
+.btn:disabled,.btn:disabled:hover{background:#EEF0F3;border-color:transparent;color:#8C949E;cursor:not-allowed}
+.fld{width:100%;height:32px;padding:0 12px;border:1px solid #CDD1D7;border-radius:4px;background:#FFFFFF;font-family:inherit;font-size:14px;color:#1F2328}
+.fld:hover{border-color:#9AA1AB}.fld:focus{outline:none;border-color:#1F5FD1}
+.fld-err,.fld-err:hover{border-color:#C4271F}
+textarea.fld{height:auto;padding:8px 12px;resize:vertical;line-height:1.5}
+.fld::placeholder{color:#6E7781}
+.field{display:flex;flex-direction:column;gap:4px}
+.req{color:#6E7781}
+.err-msg{color:#B42318}
+.help{color:#57606A}
+.range{display:flex;align-items:center;gap:8px}
+
+/* tags */
+.tag{display:inline-flex;align-items:center;min-height:22px;padding:0 6px;border-radius:4px;font-size:12px;font-weight:500}
+.tag-code{background:#EEF0F3;color:#3D444D;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* overview */
+.wrap{max-width:1360px;margin:0 auto;padding:48px 24px 80px;display:flex;flex-direction:column;gap:48px}
+.eyebrow{font-size:12px;font-weight:500;color:#57606A}
+.h1{font-size:32px;line-height:1.3;font-weight:700}
+.h2{font-size:20px;line-height:1.3;font-weight:700}
+.lead{font-size:16px;color:#3D444D;max-width:880px}
+.card{background:#FFFFFF;border:1px solid #DCDFE4;border-radius:8px}
+.grid-lv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.grid-rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.tbl-scroll{overflow-x:auto}
+.tbl{min-width:1240px}
+.tr{display:grid;grid-template-columns:44px 170px 96px 140px minmax(220px,1fr) minmax(300px,1.4fr) 210px;gap:16px;padding:14px 16px;border-bottom:1px solid #E3E5E8;align-items:start}
+.tr.th{padding:10px 16px;background:#F0F1F3;color:#57606A}
+.tr:last-child{border-bottom:0}
+.tr-g{padding:14px 16px 8px;border-bottom:1px solid #E3E5E8;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.row-link{color:inherit;text-decoration:none;font-weight:500}
+.row-link:hover{color:#1F5FD1;text-decoration:underline}
+
+/* simulator */
+.sim{display:flex;flex-wrap:wrap;min-height:calc(100vh - 49px);background:#E9EBEF}
+.sim-side{flex:1 1 280px;background:#FFFFFF;border-right:1px solid #DCDFE4;padding:20px 12px 32px;display:flex;flex-direction:column;gap:16px}
+.pick{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:6px 10px;border:0;border-radius:4px;background:transparent;color:#1F2328;font-family:inherit;font-size:14px;text-align:left;cursor:pointer}
+.pick:hover{background:#F0F1F3}
+.pick[aria-pressed="true"]{background:#E8F0FE;color:#174CB0}
+.sim-main{flex:999 1 640px;min-width:0;padding:24px;display:flex;flex-direction:column;gap:16px}
+.frame{position:relative;height:720px;border:1px solid #C4C9D0;border-radius:8px;overflow:hidden;background:#F5F6F8}
+.frame-scroll{position:absolute;inset:0;overflow:auto}
+.frame-inner{min-width:960px;height:100%;display:flex;flex-direction:column}
+.nav{display:flex;align-items:center;width:100%;height:36px;padding:0 16px;border:0;background:transparent;font-family:inherit;font-size:14px;font-weight:500;color:#57606A;text-align:left;cursor:pointer}
+.nav:hover{background:#F0F1F3;color:#1F2328}
+.nav.on{background:#E8F0FE;color:#1F2328}
+.logo{width:24px;height:24px;border-radius:4px;background:#1F5FD1;color:#FFFFFF;display:grid;place-content:center;font-size:12px;font-weight:700}
+.banner{display:flex;align-items:center;gap:8px;padding:10px 16px}
+.alert{display:flex;align-items:flex-start;gap:8px;padding:12px 16px;border-radius:4px;border:1px solid}
+.alert-ic{height:21px;display:flex;align-items:center}
+.a-err{border-color:#F0B3AE;background:#FDECEC}.a-err .alert-ic{color:#B42318}
+.a-warn{border-color:#EBCB7E;background:#FFF4DB}.a-warn .alert-ic{color:#6F4A00}
+.a-ok{border-color:#A8D9B6;background:#E7F6EC}.a-ok .alert-ic{color:#1A6B33}
+.a-neutral{border-color:#DCDFE4;background:#F5F6F8}.a-neutral .alert-ic{color:#3D444D}
+.t-strong{font-weight:500}
+.t-sub{color:#3D444D}
+.stat{background:#FFFFFF;border:1px solid #E3E5E8;border-radius:4px;padding:12px 16px;min-height:92px}
+.stat-v{margin-top:2px;font-size:24px;line-height:1.3;font-weight:700}
+.stat-v span{font-size:14px;font-weight:400}
+.cap{font-size:12px;color:#57606A}
+.lt{background:#FFFFFF;border:1px solid #E3E5E8;border-radius:4px;overflow:hidden}
+.lr{display:grid;grid-template-columns:40px 140px 110px minmax(0,1fr) 64px 96px 48px;align-items:center;height:40px;border-bottom:1px solid #E3E5E8}
+.lr>span{padding:0 12px}
+.lr>span.c{padding:0;display:flex;justify-content:center}
+.lr.th{background:#F0F1F3;color:#57606A}
+.num{font-variant-numeric:tabular-nums}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.skel{display:block;height:12px;background:#E6E8EB;border-radius:4px;animation:pulse 1.4s ease-in-out infinite}
+.errpage{max-width:500px;margin:0 auto;padding:72px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.bigic{width:64px;height:64px;border-radius:50%;background:#EEF0F3;color:#3D444D;display:grid;place-content:center}
+.code-lbl{margin-top:4px;font-size:12px;font-weight:700;color:#57606A}
+.err-h{font-size:24px;line-height:1.3;font-weight:700}
+.actions{display:flex;gap:8px;margin-top:8px}
+.overlay{position:absolute;inset:0;background:rgba(15,23,42,.42)}
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
+.dlg{background:#FFFFFF;border:1px solid #DCDFE4;border-radius:8px;box-shadow:0 12px 32px rgba(15,23,42,.2);display:flex;flex-direction:column}
+.dlg-h{padding:8px 8px 8px 16px;min-height:48px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #E3E5E8}
+.dlg-h p{flex:1;font-size:16px;font-weight:500}
+.dlg-b{padding:16px;display:flex;flex-direction:column;gap:12px}
+.dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid #E3E5E8}
+.sheet{position:absolute;top:0;right:0;bottom:0;width:420px;max-width:100%;background:#FFFFFF;border-left:1px solid #DCDFE4;box-shadow:-8px 0 24px rgba(15,23,42,.12);display:flex;flex-direction:column}
+.sheet-b{flex:1;min-height:0;overflow-y:auto;padding:12px 16px 32px;display:flex;flex-direction:column;gap:16px}
+.toast{position:absolute;right:16px;bottom:16px;width:380px;display:flex;align-items:flex-start;gap:8px;padding:12px 8px 12px 16px;background:#FFFFFF;border:1px solid #DCDFE4;border-radius:8px;box-shadow:0 12px 32px rgba(15,23,42,.18)}
+.file{display:flex;align-items:flex-start;gap:8px;padding:8px 8px 8px 12px;border:1px solid #E3E5E8;border-radius:4px;background:#FFFFFF}
+.file.bad{border-color:#F0B3AE}
+.diff{border:1px solid #E3E5E8;border-radius:4px;overflow:hidden}
+.diff>div{display:grid;grid-template-columns:96px 1fr 1fr;border-bottom:1px solid #E3E5E8}
+.diff>div:last-child{border-bottom:0}
+.diff span{padding:8px 12px}
+.diff .th{background:#F0F1F3;color:#57606A}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="top">
+<span class="top-title">網頁服務錯誤狀況與處理方式</span>
+<nav class="tabs" role="tablist" aria-label="檢視">
+<a class="tab" role="tab" id="tab-list" href="#list" aria-controls="view-list">清單與原則</a>
+<a class="tab" role="tab" id="tab-sim" href="#sim" aria-controls="view-sim">錯誤狀況模擬器</a>
+</nav>
+</header>
+
+<main id="view-list" role="tabpanel" aria-labelledby="tab-list"></main>
+<main id="view-sim" role="tabpanel" aria-labelledby="tab-sim" hidden>
+<div class="sim">
+<aside class="sim-side">
+<div style="padding:0 10px;display:flex;flex-direction:column;gap:4px">
+<h1 style="font-size:18px;line-height:1.3;font-weight:700">錯誤狀況模擬器</h1>
+<p style="color:#57606A">選一種狀況，右邊顯示「員工服務入口」遇到時的畫面。</p>
+</div>
+<nav id="picks" aria-label="錯誤狀況" style="display:flex;flex-direction:column;gap:12px"></nav>
+</aside>
+<div class="sim-main">
+<section id="info" class="card" aria-live="polite" style="padding:16px 20px;display:flex;flex-direction:column;gap:12px"></section>
+<div class="frame" aria-label="模擬畫面"><div id="frame"></div></div>
+</div>
+</div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- icons (Lucide paths) ---------- */
+  var P = {
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    alertC: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+    alertT: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>',
+    wifiOff: '<path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M5 12.86a10 10 0 0 1 5.17-2.69M19 12.86a10 10 0 0 0-2.01-1.53M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M2 2l20 20"/>',
+    refresh: '<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5"/>',
+    compass: '<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/>',
+    unlink: '<path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71M8 2v3M2 8h3M16 22v-3M22 16h-3"/>',
+    server: '<rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54z"/>',
+    copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
+    arrowUp: '<circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    chevL: '<path d="m15 18-6-6 6-6"/>',
+    chevR: '<path d="m9 18 6-6-6-6"/>'
+  };
+  function ic(n, s) {
+    s = s || 16;
+    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + P[n] + '</svg>';
+  }
+  var DOTS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
+  function xBtn(label) { return '<button class="btn btn-sm btn-t btn-i" aria-label="' + (label || '關閉') + '">' + ic('x') + '</button>'; }
+
+  /* ---------- data ---------- */
+  var LV = {
+    field:  { name: '欄位',     bg: '#E8F0FE', fg: '#174CB0' },
+    block:  { name: '區塊',     bg: '#E1F4F1', fg: '#0E6158' },
+    alert:  { name: '頁內通知', bg: '#FFF4DB', fg: '#6F4A00' },
+    banner: { name: '全域橫幅', bg: '#F1EAFB', fg: '#56299A' },
+    toast:  { name: '短暫回饋', bg: '#E7F6EC', fg: '#1A6B33' },
+    dialog: { name: '對話框',   bg: '#FFEDE0', fg: '#8F4300' },
+    page:   { name: '整頁',     bg: '#FDECEC', fg: '#A61B1B' }
+  };
+  var LEVELS = [
+    ['field', '只影響一個欄位或一個檔案。', '表單驗證、檔案上傳（#14 #15）'],
+    ['block', '一塊內容失敗，頁面其他部分照常。', '逾時、部分載入失敗、空結果（#11–13）'],
+    ['alert', '要持續看得到，但不阻擋操作。', '批次部分失敗、外部同步延遲（#18 #20）'],
+    ['banner', '影響整個系統的狀態。', '離線、新版本、維護預告、瀏覽器（#10 #21–23）'],
+    ['toast', '操作的結果，幾秒後消失；失敗一定附重試。', '送出失敗、操作太頻繁（#9 #16）'],
+    ['dialog', '使用者必須先做決定才能繼續。', '登入逾時、資料衝突、未儲存（#3 #17 #19）'],
+    ['page', '頁面本身無法顯示。', '404、403、410、SSO、500、502、503（#1–8）']
+  ];
+  var GROUPS = [
+    { name: 'A. 頁面與存取', desc: '使用者到不了、或不該看到這個頁面', items: [
+      [1, '找不到頁面', '404', 'page', '整頁（保留導覽）', '網址打錯、書籤過期、頁面已搬移。', '內容區換成錯誤頁，保留側邊導覽讓使用者能繼續走；顯示輸入的網址，方便發現打錯字。', '回上一頁、回首頁、常用功能捷徑'],
+      [2, '權限不足', '403', 'page', '整頁（保留導覽）', '角色沒有這頁的權限，例如一般員工打開主管的部門總覽。', '說明需要哪種權限、目前登入的是哪個帳號；不透露頁面內容。提供申請權限，送出後給確認。', '申請存取權限、切換帳號'],
+      [3, '登入逾時', '401', 'dialog', '對話框', '閒置太久、token 過期、在別的分頁登出。', '用對話框請使用者重新登入，背景頁面不跳走；已填內容先暫存，登入後回到原處。', '重新登入'],
+      [4, '內容已刪除／連結失效', '410', 'page', '整頁（保留導覽）', '從通知信打開某筆申請，但它已被撤回或刪除。', '明確說「已不存在」而不是「找不到」，可公開時說明何時、為什麼被移除。', '查看我的申請'],
+      [5, '登入失敗（SSO）', 'SSO', 'page', '整頁（取代整個應用）', '帳號尚未開通此系統、公司目錄查無此人、SSO 回傳錯誤。', '在登入頁說明原因與目前帳號，給出開通流程與聯絡窗口，附上錯誤代碼。', '改用其他帳號、申請開通']
+    ]},
+    { name: 'B. 伺服器與服務', desc: '問題在系統端，不是使用者的錯', items: [
+      [6, '系統錯誤', '500', 'page', '整頁或區塊', '後端程式例外、未預期的錯誤。', '直說「是系統的問題，不是你操作錯」；提供錯誤編號與時間方便回報，可重試。', '重試、複製錯誤編號、回報問題'],
+      [7, '服務暫時無法連線', '502 / 504', 'page', '整頁或區塊', '上游服務（如 HR 系統）沒有回應、閘道逾時。', '說明通常是暫時性的，自動倒數重試，同時保留手動重試。', '等待自動重試、立即重試'],
+      [8, '系統維護中', '503', 'page', '整頁（取代整個應用）', '計畫性維護、緊急停機。', '告知預計恢復時間，以及維護期間的替代管道（例如緊急請假怎麼辦）。', '查看恢復時間、使用替代管道'],
+      [9, '操作太頻繁', '429', 'toast', '短暫回饋＋按鈕停用', '短時間內重複送出、匯出次數達上限。', '說明上限與要等多久；按鈕顯示倒數，時間到自動恢復。', '等待後再試']
+    ]},
+    { name: 'C. 網路', desc: '連線本身出問題', items: [
+      [10, '網路中斷（離線）', 'Offline', 'banner', '全域橫幅', 'Wi-Fi 斷線、VPN 中斷。', '頂部常駐橫幅；已載入的資料保留可讀並標示時間，需要連線的操作停用；恢復後自動同步。', '檢查網路，恢復後自動繼續'],
+      [11, '載入逾時／連線緩慢', 'Timeout', 'block', '區塊', '網路慢、資料量大、查詢太久。', '先顯示骨架畫面；超過約 10 秒告知「比平常久」並提供重試，不要無限轉圈。', '繼續等待、重新載入'],
+      [12, '部分資料載入失敗', 'Partial', 'block', '區塊', '頁面由多個 API 組成，其中一個失敗。', '只有失敗的區塊（特休剩餘）顯示錯誤與重試，其他區塊照常顯示。', '重試該區塊']
+    ]},
+    { name: 'D. 資料與操作', desc: '使用者做了某個動作之後', items: [
+      [13, '查無資料（非錯誤）', '200 · 空', 'block', '區塊（空狀態）', '搜尋或篩選沒有結果、第一次使用還沒有資料。', '跟錯誤分開處理：說明目前的條件，提供清除篩選或新增。不要用紅色。', '清除篩選、新增申請'],
+      [14, '表單驗證錯誤', '400 / 422', 'field', '欄位', '必填沒填、格式錯、伺服器規則不符（例如特休不足）。', '錯誤寫在欄位下方；送出時頂部列出摘要並可跳到該欄位；已填內容不清空。', '修正欄位後再送出'],
+      [15, '檔案上傳失敗', '413 / 415', 'field', '欄位（檔案列）', '檔案太大、格式不支援、上傳中斷。', '在那一個檔案列標示原因，其他檔案不受影響；中斷的可重試，其他可移除後重傳。', '壓縮或換格式後重傳'],
+      [16, '儲存／送出失敗', '5xx（操作）', 'toast', '短暫回饋', '按下送出或撤回時伺服器或網路出錯。', '錯誤 Toast 附「重試」，停留較久或需手動關閉；資料維持原狀並說明目前狀態。', '重試'],
+      [17, '資料衝突', '409', 'dialog', '對話框', '編輯期間別人改了同一筆，或主管已經審核。', '說明誰、何時改了什麼，列出差異，讓使用者選擇保留哪一版。', '載入最新版本、以我的版本送出'],
+      [18, '批次操作部分失敗', '207', 'alert', '頁內通知', '一次撤回多筆，其中幾筆失敗。', '分開說成功與失敗筆數，逐筆列出原因；失敗項目保持勾選，可以只重試它們。', '重試失敗項目'],
+      [19, '離開前有未儲存變更', '預防', 'dialog', '對話框', '填到一半點了別的頁或關閉面板。', '離開前確認；「繼續編輯」是主要按鈕，捨棄是次要動作。', '繼續編輯、捨棄變更']
+    ]},
+    { name: 'E. 環境與系統狀態', desc: '跟目前操作無關，但會影響使用', items: [
+      [20, '外部系統同步失敗', 'Sync', 'alert', '頁內通知', 'HR／差勤系統同步中斷，假別餘額可能不是最新。', '告知最後更新時間與可能的影響，相關數字旁也標示資料時間；不阻擋操作。', '稍後再看、聯絡 HR'],
+      [21, '系統已更新', 'Version', 'banner', '全域橫幅', '使用者開著舊分頁，系統已上線新版本。', '提示重新整理，但不強制中斷正在進行的工作。', '重新整理'],
+      [22, '維護預告', '公告', 'banner', '全域橫幅', '即將進行計畫性維護。', '提前告知時間與影響範圍，可關閉。', '提前完成工作'],
+      [23, '瀏覽器不支援', 'Browser', 'banner', '全域橫幅', '瀏覽器版本過舊、停用 Cookie。', '說明哪些功能會受影響與建議的瀏覽器，可關閉。', '更新瀏覽器']
+    ]}
+  ];
+  GROUPS.forEach(function (g) {
+    g.items = g.items.map(function (a) {
+      return { id: a[0], title: a[1], code: a[2], lv: a[3], layer: a[4], trigger: a[5], handling: a[6], next: a[7], num: String(a[0]).padStart(2, '0') };
+    });
+  });
+  var ALL = [].concat.apply([], GROUPS.map(function (g) { return g.items; }));
+  var RULES = [
+    ['說清楚發生什麼事', '用使用者看得懂的話，不要只丟代碼。', '錯誤 500：Internal Server Error', '系統發生錯誤，申請尚未送出'],
+    ['說是誰的問題', '系統端的錯誤要明說不是使用者的錯，降低焦慮。', '操作失敗，請檢查你的輸入', '這是系統的問題，不是你操作錯誤'],
+    ['每個錯誤都有下一步', '至少一個可以按的動作：重試、返回、申請、聯絡。', '發生錯誤。', '重試　或　回到請假申請'],
+    ['保留使用者的內容與位置', '錯誤發生後，已填的表單、捲動位置、勾選都不要清掉。', '登入逾時後跳回首頁，表單清空', '重新登入後回到原處，內容還在'],
+    ['給可回報的線索', '系統錯誤附錯誤編號與時間，客服才查得到。', '請聯絡管理員', '錯誤編號 ERR-7F3A-29C1，可複製'],
+    ['不只靠顏色', '狀態一定有圖示與文字，紅色只留給真正的錯誤。', '只把欄位框變紅', '紅框＋圖示＋「請填寫事由」']
+  ];
+  function lvTag(it) { var l = LV[it.lv]; return '<span class="tag" style="background:' + l.bg + ';color:' + l.fg + '">' + it.layer + '</span>'; }
+
+  /* ---------- overview ---------- */
+  function renderList() {
+    var h = '<div class="wrap">';
+    h += '<header style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">UX 規範 · 錯誤處理</p><h1 class="h1">網頁服務錯誤狀況清單與處理方式</h1>' +
+      '<p class="lead">共 23 種狀況，分成 5 類。原則是從最小的範圍處理錯誤：能在欄位解決就不擋整個表單，能在區塊解決就不換掉整頁。點表格裡的狀況名稱，可以直接在<a href="#sim">錯誤狀況模擬器</a>看實際畫面。</p></header>';
+
+    h += '<section style="display:flex;flex-direction:column;gap:16px"><h2 class="h2">處理層級：由小到大</h2><div class="grid-lv">';
+    LEVELS.forEach(function (x, i) {
+      var l = LV[x[0]];
+      h += '<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:8px">' +
+        '<span class="num" style="font-size:12px;font-weight:700;color:#57606A">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span class="tag" style="font-size:14px;height:24px;padding:0 8px;background:' + l.bg + ';color:' + l.fg + '">' + l.name + '</span></div>' +
+        '<p>' + x[1] + '</p><p style="font-size:12px;line-height:1.4;color:#57606A">' + x[2] + '</p></div>';
+    });
+    h += '</div></section>';
+
+    h += '<section style="display:flex;flex-direction:column;gap:16px"><h2 class="h2">完整清單</h2><div class="card tbl-scroll"><div class="tbl" role="table" aria-label="錯誤狀況清單">' +
+      '<div class="tr th" role="row"><span role="columnheader">#</span><span role="columnheader">狀況</span><span role="columnheader">代碼</span><span role="columnheader">處理層級</span><span role="columnheader">什麼時候會發生</span><span role="columnheader">UI 怎麼處理</span><span role="columnheader">使用者下一步</span></div>';
+    GROUPS.forEach(function (g) {
+      h += '<div class="tr-g" role="row"><span role="cell" style="font-size:16px;font-weight:700">' + g.name + '</span><span style="color:#57606A">' + g.desc + '</span></div>';
+      g.items.forEach(function (it) {
+        h += '<div class="tr" role="row"><span role="cell" class="num" style="color:#57606A">' + it.num + '</span>' +
+          '<span role="cell"><a class="row-link" href="#sim/' + it.id + '">' + it.title + '</a></span>' +
+          '<span role="cell"><span class="tag tag-code">' + it.code + '</span></span>' +
+          '<span role="cell">' + lvTag(it) + '</span>' +
+          '<span role="cell" class="t-sub">' + it.trigger + '</span>' +
+          '<span role="cell">' + it.handling + '</span>' +
+          '<span role="cell" class="t-sub">' + it.next + '</span></div>';
+      });
+    });
+    h += '</div></div></section>';
+
+    h += '<section style="display:flex;flex-direction:column;gap:16px"><h2 class="h2">寫錯誤訊息的 6 個原則</h2><div class="grid-rule">';
+    RULES.forEach(function (r) {
+      h += '<div class="card" style="padding:20px;display:flex;flex-direction:column;gap:8px"><h3 style="font-size:16px;line-height:1.3;font-weight:700">' + r[0] + '</h3>' +
+        '<p class="t-sub">' + r[1] + '</p><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;font-size:13px">' +
+        '<span style="color:#A61B1B">✕ ' + r[2] + '</span><span style="color:#1A6B33">✓ ' + r[3] + '</span></div></div>';
+    });
+    h += '</div></section></div>';
+    document.getElementById('view-list').innerHTML = h;
+  }
+
+  /* ---------- simulator ---------- */
+  var state = { sel: 1, requested: false };
+
+  function renderPicks() {
+    var h = '';
+    GROUPS.forEach(function (g) {
+      h += '<div style="display:flex;flex-direction:column;gap:2px"><p style="padding:0 10px 4px;font-size:12px;font-weight:700;color:#57606A">' + g.name + '</p>';
+      g.items.forEach(function (it) {
+        h += '<button class="pick" data-pick="' + it.id + '" aria-pressed="false">' +
+          '<span class="num" style="font-size:12px;color:#57606A;width:18px">' + it.num + '</span>' +
+          '<span style="flex:1;min-width:0;font-weight:500">' + it.title + '</span>' +
+          '<span class="mono" style="font-size:12px;color:#57606A">' + it.code + '</span></button>';
+      });
+      h += '</div>';
+    });
+    document.getElementById('picks').innerHTML = h;
+  }
+
+  function flags() {
+    var s = state.sel, is = function (n) { return s === n; };
+    var f = {
+      e404: is(1), e403: is(2), e401: is(3), e410: is(4), sso: is(5), e500: is(6), e502: is(7), e503: is(8),
+      e429: is(9), offline: is(10), timeout: is(11), partial: is(12), empty: is(13), form: is(14), upload: is(15),
+      saveFail: is(16), conflict: is(17), batch: is(18), unsaved: is(19), sync: is(20), newVer: is(21), notice: is(22), browser: is(23)
+    };
+    f.fullContent = f.e404 || f.e403 || f.e410 || f.e500 || f.e502;
+    f.app = !(f.sso || f.e503);
+    f.list = f.app && !f.fullContent;
+    f.sheet = f.form || f.upload || f.unsaved;
+    f.dim = f.e401 || f.conflict || f.unsaved;
+    return f;
+  }
+
+  function alertBox(kind, icon, body, extra, role) {
+    return '<div class="alert a-' + kind + '" role="' + (role || 'status') + '"><span class="alert-ic">' + ic(icon) + '</span><div style="flex:1">' + body + '</div>' + (extra || '') + '</div>';
+  }
+
+  function banners(f) {
+    var h = '';
+    if (f.offline) h += '<div class="banner" role="status" style="background:#2B3138;color:#FFFFFF">' + ic('wifiOff') +
+      '<span style="flex:1">你目前離線。畫面顯示的是 14:05 的資料，新增與撤回暫時無法使用；恢復連線後會自動更新。</span>' +
+      '<button class="btn btn-sm" style="background:transparent;color:#FFFFFF;border-color:#8C949E">重新連線</button></div>';
+    if (f.newVer) h += '<div class="banner" role="status" style="background:#E8F0FE;color:#0B3E8F;border-bottom:1px solid #B9CEF5">' + ic('arrowUp') +
+      '<span style="flex:1;color:#1F2328">系統已更新到新版本。重新整理即可使用最新功能，尚未送出的內容會保留。</span>' +
+      '<button class="btn btn-sm btn-p">重新整理</button>' + xBtn('稍後再說') + '</div>';
+    if (f.notice) h += '<div class="banner" role="status" style="background:#E8F0FE;color:#0B3E8F;border-bottom:1px solid #B9CEF5">' + ic('calendar') +
+      '<span style="flex:1;color:#1F2328"><b class="t-strong">維護預告：</b>10/31（六）22:00 – 11/01（日）02:00 系統暫停服務，期間無法送出或審核申請。</span>' +
+      '<a href="#" class="t-strong" onclick="return false">維護公告</a>' + xBtn() + '</div>';
+    if (f.browser) h += '<div class="banner" role="status" style="background:#FFF4DB;color:#6F4A00;border-bottom:1px solid #EBCB7E">' + ic('globe') +
+      '<span style="flex:1;color:#1F2328">你的瀏覽器版本過舊，檔案上傳與日期選擇可能無法正常運作。建議使用最新版 Chrome、Edge 或 Safari。</span>' +
+      '<a href="#" class="t-strong" onclick="return false">如何更新</a>' + xBtn() + '</div>';
+    return h;
+  }
+
+  function sidebar(f) {
+    var items = ['首頁', '請假', '報帳', '薪資單', '公告', '部門請假總覽'];
+    var on = f.e403 ? '部門請假總覽' : '請假';
+    var h = '<nav aria-label="主選單" style="width:200px;flex-shrink:0;background:#FFFFFF;border-right:1px solid #E3E5E8;display:flex;flex-direction:column">' +
+      '<div style="height:48px;padding:0 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #E3E5E8"><span class="logo">員</span><span class="t-strong">員工服務入口</span></div>' +
+      '<div style="padding:8px 0;display:flex;flex-direction:column">';
+    items.forEach(function (n) { h += '<button class="nav' + (n === on ? ' on' : '') + '">' + n + '</button>'; });
+    h += '</div><div style="margin-top:auto;border-top:1px solid #E3E5E8;padding:8px 16px;display:flex;align-items:center;gap:8px">' +
+      '<span style="width:24px;height:24px;border-radius:50%;background:#E1F4F1;color:#0E6158;display:grid;place-content:center;font-size:12px;font-weight:500">林</span><span>林雅婷</span></div></nav>';
+    return h;
+  }
+
+  function pageHeader(f) {
+    var titles = { 1: '找不到頁面', 2: '部門請假總覽', 4: '請假申請 LV-2026-0402' };
+    var h = '<header style="height:48px;flex-shrink:0;padding:0 16px;display:flex;align-items:center;gap:8px;background:#FFFFFF;border-bottom:1px solid #E3E5E8">' +
+      '<p class="ell" style="flex:1;font-size:16px;font-weight:500">' + (titles[state.sel] || '請假申請') + '</p>';
+    if (f.list) {
+      h += '<div style="display:flex;gap:8px">';
+      h += f.e429 ? '<button class="btn btn-sm" disabled>' + ic('clock') + '匯出（28 秒後可再試）</button>' : '<button class="btn btn-sm">' + ic('download') + '匯出</button>';
+      h += f.offline ? '<button class="btn btn-sm" disabled>' + ic('plus') + '新增申請</button>' : '<button class="btn btn-sm btn-p">' + ic('plus') + '新增申請</button>';
+      h += '</div>';
+    }
+    return h + '</header>';
+  }
+
+  var ST = { '待審核': ['#FFEDE0', '#8F4300'], '已核准': ['#E7F6EC', '#1A6B33'], '已撤回': ['#EEF0F3', '#3D444D'], '已駁回': ['#FDECEC', '#A61B1B'] };
+  function rows(f) {
+    var r = [
+      ['LV-2026-0431', '特休', '2026/11/03 – 11/04', '2', '待審核'],
+      ['LV-2026-0428', '病假', '2026/10/27', '1', '已核准'],
+      ['LV-2026-0419', '事假', '2026/11/14（下午）', '0.5', '已核准'],
+      ['LV-2026-0412', '特休', '2026/10/13 – 10/15', '3', '已撤回'],
+      ['LV-2026-0397', '補休', '2026/11/21', '1', '待審核'],
+      ['LV-2026-0385', '家庭照顧假', '2026/09/29', '1', '已駁回']
+    ];
+    return r.map(function (x) {
+      var o = { no: x[0], type: x[1], range: x[2], days: x[3], st: x[4], checked: false };
+      if (f.batch) {
+        if (o.no === 'LV-2026-0431' || o.no === 'LV-2026-0397') o.st = '已撤回';
+        if (o.no === 'LV-2026-0428' || o.no === 'LV-2026-0419') o.checked = true;
+      }
+      return o;
+    });
+  }
+
+  function listPage(f) {
+    var h = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px">';
+    if (f.sync) h += alertBox('warn', 'alertT', '<p class="t-strong">HR 系統同步延遲</p><p class="t-sub">假別餘額最後更新於 10/27 18:00，今天的異動可能還沒反映。送出申請不受影響，HR 會以實際餘額審核。</p>', '<button class="btn btn-sm btn-t">聯絡 HR</button>');
+    if (f.batch) h += alertBox('err', 'alertC', '<div style="display:flex;flex-direction:column;gap:4px"><p class="t-strong">2 筆已撤回，2 筆無法撤回</p><ul style="padding-left:18px" class="t-sub">' +
+      '<li><b class="t-strong" style="color:#1F2328">LV-2026-0428</b>：請假日期已過，需由主管撤銷。</li><li><b class="t-strong" style="color:#1F2328">LV-2026-0419</b>：伺服器沒有回應，可以重試。</li></ul><p class="t-sub">失敗的 2 筆仍為勾選狀態。</p></div>', xBtn(), 'alert');
+
+    var c1;
+    if (f.partial) c1 = '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;align-items:flex-start"><p style="display:flex;align-items:center;gap:6px;color:#B42318">' + ic('alertC') + '無法載入特休餘額</p><button class="btn btn-sm btn-t" style="margin-left:-10px">' + ic('refresh') + '重試</button></div>';
+    else if (f.sync) c1 = '<p class="stat-v">7.5 <span>天</span></p><p class="cap" style="color:#6F4A00;display:flex;align-items:center;gap:4px">' + ic('clock', 12) + '10/27 18:00 的資料</p>';
+    else c1 = '<p class="stat-v">7.5 <span>天</span></p><p class="cap">2026 年度，12/31 到期</p>';
+    h += '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">' +
+      '<div class="stat"><p style="color:#57606A">特休剩餘</p>' + c1 + '</div>' +
+      '<div class="stat"><p style="color:#57606A">待審核</p><p class="stat-v">2 <span>筆</span></p><p class="cap">最近一筆 LV-2026-0431</p></div>' +
+      '<div class="stat"><p style="color:#57606A">今年已請</p><p class="stat-v">12 <span>天</span></p><p class="cap">特休 8 · 病假 2 · 其他 2</p></div></div>';
+
+    h += '<div style="display:flex;align-items:center;gap:8px"><label for="sim-q" class="sr">搜尋申請</label>' +
+      (f.empty ? '<input id="sim-q" class="fld" style="width:260px;height:28px" value="婚假">' : '<input id="sim-q" class="fld" style="width:260px;height:28px" placeholder="搜尋申請編號、假別">') +
+      (f.empty ? '<button class="btn btn-sm" style="background:#E8F0FE;border-color:transparent;color:#174CB0">' + ic('filter') + '期間：2026 年</button>' : '<button class="btn btn-sm btn-t btn-i" aria-label="篩選">' + ic('filter') + '</button>') +
+      '<span style="flex:1"></span><button class="btn btn-sm btn-t btn-i" aria-label="重新整理">' + ic('refresh') + '</button></div>';
+
+    h += '<div class="lt"><div class="lr th"><span class="c"><input type="checkbox" aria-label="全選"' + (f.batch ? ' checked' : '') + '></span><span>申請編號</span><span>假別</span><span>日期</span><span style="text-align:right">天數</span><span>狀態</span><span></span></div>';
+    if (f.timeout) {
+      h += '<div role="status" style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:#E8F0FE;border-bottom:1px solid #E3E5E8"><span style="color:#0B3E8F;display:flex">' + ic('clock') + '</span>' +
+        '<span style="flex:1">載入時間比平常久，可能是網路較慢。我們會繼續嘗試，你也可以重新載入。</span><button class="btn btn-sm">重新載入</button></div>';
+      ['160px', '120px', '180px', '140px', '100px'].forEach(function (w) {
+        h += '<div class="lr"><span></span><span><span class="skel" style="width:96px"></span></span><span><span class="skel" style="width:48px"></span></span><span><span class="skel" style="width:' + w + '"></span></span><span><span class="skel" style="width:24px;margin-left:auto"></span></span><span><span class="skel" style="width:56px;height:18px"></span></span><span></span></div>';
+      });
+    } else if (f.empty) {
+      h += '<div style="padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">' +
+        '<span style="width:48px;height:48px;border-radius:50%;background:#F0F1F3;color:#57606A;display:grid;place-content:center">' + ic('search', 24) + '</span>' +
+        '<p style="margin-top:4px;font-size:16px;font-weight:500">找不到符合條件的申請</p><p style="color:#57606A;max-width:400px">目前條件：關鍵字「婚假」、期間「2026 年」。試試其他關鍵字，或清除篩選看全部申請。</p>' +
+        '<div class="actions"><button class="btn">清除篩選</button><button class="btn btn-p">新增申請</button></div></div>';
+    } else {
+      rows(f).forEach(function (r) {
+        var s = ST[r.st];
+        h += '<div class="lr"><span class="c"><input type="checkbox" aria-label="選取 ' + r.no + '"' + (r.checked ? ' checked' : '') + '></span>' +
+          '<span class="num">' + r.no + '</span><span>' + r.type + '</span><span class="num ell">' + r.range + '</span><span class="num" style="text-align:right">' + r.days + '</span>' +
+          '<span><span class="tag" style="font-size:13px;font-weight:400;background:' + s[0] + ';color:' + s[1] + '">' + r.st + '</span></span>' +
+          '<span class="c"><button class="btn btn-sm btn-t btn-i" style="height:24px;width:24px" aria-label="更多操作">' + DOTS + '</button></span></div>';
+      });
+    }
+    h += '</div>';
+    var info = f.empty ? '共 0 筆' : (f.timeout ? '載入中…' : '第 1–6 筆，共 6 筆');
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;color:#57606A"><span>' + info + '</span><div style="display:flex;gap:4px;align-items:center">' +
+      '<button class="btn btn-sm btn-t btn-i" aria-label="上一頁" disabled>' + ic('chevL') + '</button><button class="btn btn-sm btn-i" style="border-color:#1F5FD1;color:#1F5FD1" aria-current="page">1</button><button class="btn btn-sm btn-t btn-i" aria-label="下一頁" disabled>' + ic('chevR') + '</button></div></div>';
+    return h + '</div>';
+  }
+
+  function errPage(icon, code, title, body, actions, extra, icStyle, tail) {
+    return '<div class="errpage"><span class="bigic"' + (icStyle ? ' style="' + icStyle + '"' : '') + '>' + ic(icon, 28) + '</span><p class="code-lbl">' + code + '</p>' +
+      '<h2 class="err-h">' + title + '</h2><p class="t-sub">' + body + '</p>' + (extra || '') + (actions ? '<div class="actions">' + actions + '</div>' : '') + (tail || '') + '</div>';
+  }
+
+  function fullContent(f) {
+    if (f.e404) return errPage('compass', '404', '找不到這個頁面', '網址可能打錯了，或這個頁面已經搬到別的地方。',
+      '<button class="btn">回上一頁</button><button class="btn btn-p">回到首頁</button>',
+      '<code style="padding:4px 8px;border-radius:4px;background:#EEF0F3;color:#3D444D;font-size:13px">portal.company.com/leave/reqeusts</code>', '',
+      '<p style="margin-top:16px;color:#57606A">你可能在找：<a href="#" onclick="return false">請假申請</a> · <a href="#" onclick="return false">報帳</a> · <a href="#" onclick="return false">薪資單</a></p>');
+    if (f.e403) {
+      var act = state.requested ? '' : '<button class="btn">切換帳號</button><button class="btn btn-p" data-act="request">申請存取權限</button>';
+      var done = state.requested ? '<div style="margin-top:8px;text-align:left">' + alertBox('ok', 'check', '<span>已送出申請給你的主管王志明。核准後會寄 Email 通知你，通常 1 個工作天內。</span>') + '</div>' : '';
+      return errPage('lock', '403', '你沒有查看「部門請假總覽」的權限', '這個頁面只開放給部門主管與 HR。你目前以 <b class="t-strong" style="color:#1F2328">林雅婷（yating.lin@company.com）</b>登入。', act, done, '',
+        '<p style="margin-top:16px;color:#57606A">有疑問？聯絡 <a href="#" onclick="return false">IT 服務台</a></p>');
+    }
+    if (f.e410) return errPage('unlink', '410', '這筆申請已不存在', 'LV-2026-0402 已於 10/12 由申請人撤回並刪除，所以通知信裡的連結已經失效。', '<button class="btn btn-p">查看我的申請</button>');
+    if (f.e500) return errPage('server', '500', '系統發生錯誤', '這是系統的問題，不是你操作錯誤，工程團隊已經收到通知。你可以稍後重試；如果一直發生，請把下面的錯誤編號提供給 IT 服務台。',
+      '<button class="btn">回報問題</button><button class="btn btn-p">' + ic('refresh') + '重試</button>',
+      '<div style="display:flex;align-items:center;gap:12px;padding:8px 8px 8px 12px;border:1px solid #DCDFE4;border-radius:4px;background:#FFFFFF;text-align:left"><div><p class="mono t-strong">ERR-7F3A-29C1</p><p class="cap">2026/10/28 13:42:07</p></div>' +
+      '<button class="btn btn-sm btn-t" data-act="copy">' + ic('copy') + '<span>複製</span></button></div>', 'background:#FDECEC;color:#B42318');
+    if (f.e502) return errPage('refresh', '502 / 504', '暫時無法連線到假別服務', 'HR 系統目前沒有回應，通常幾分鐘內就會恢復。你不需要做任何事，我們會自動重試。', '<button class="btn btn-p">立即重試</button>',
+      '<div style="width:280px;display:flex;flex-direction:column;gap:6px;margin-top:4px"><div style="height:4px;border-radius:2px;background:#E3E5E8;overflow:hidden"><div style="width:60%;height:100%;background:#2F6FDE"></div></div><p class="cap">12 秒後自動重試（第 2 次）</p></div>');
+    return '';
+  }
+
+  function maintenance() {
+    return '<div style="min-height:100%;background:#FFFFFF;display:flex;flex-direction:column">' +
+      '<div style="height:48px;padding:0 24px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #E3E5E8"><span class="logo">員</span><span class="t-strong">員工服務入口</span></div>' +
+      errPage('wrench', '503', '系統維護中', '員工服務入口正在進行例行維護，請假、報帳、薪資單暫時無法使用。', '',
+        '<p style="font-size:16px;font-weight:500">預計恢復：今天 18:00</p><div style="width:100%;margin-top:8px;text-align:left">' +
+        alertBox('neutral', 'info', '<p class="t-strong">維護期間需要請假？</p><p class="t-sub">請先直接告知主管，系統恢復後再補登。其他急事請撥 IT 服務台分機 [分機號碼]。</p>') +
+        '</div><a href="#" onclick="return false" class="t-strong" style="margin-top:8px">查看維護公告</a>', 'background:#E8F0FE;color:#174CB0') + '</div>';
+  }
+
+  function sso() {
+    return '<div style="min-height:100%;background:#F5F6F8;display:flex;align-items:center;justify-content:center;padding:48px 24px">' +
+      '<div class="card" style="width:420px;padding:32px;display:flex;flex-direction:column;gap:16px">' +
+      '<div style="display:flex;align-items:center;gap:8px"><span class="logo" style="width:28px;height:28px;font-size:14px">員</span><span style="font-size:16px;font-weight:500">員工服務入口</span></div>' +
+      alertBox('err', 'userX', '<p class="t-strong">這個帳號還沒有開通員工服務入口</p><p class="t-sub">你以 <b class="t-strong" style="color:#1F2328">wu.jiahao@partner-vendor.com</b> 登入。外包與合作夥伴帳號需要由部門窗口申請開通。</p>', '', 'alert') +
+      '<button class="btn btn-p" style="height:36px">使用其他帳號登入</button><a href="#" onclick="return false" class="t-strong" style="text-align:center">如何申請開通</a>' +
+      '<p class="cap" style="padding-top:12px;border-top:1px solid #E3E5E8">錯誤代碼：AADSTS50105 · 2026/10/28 13:42 · 回報時請附上此代碼</p></div></div>';
+  }
+
+  function sel(id, val) { return '<select id="' + id + '" class="fld">' + ['特休', '病假', '事假'].map(function (o) { return '<option' + (o === val ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>'; }
+  function dates(id, a, b, help) {
+    return '<div class="field"><label for="' + id + '">期間<span class="req">*</span></label><div class="range"><input id="' + id + '" class="fld" value="' + a + '"><span style="color:#57606A">–</span><input aria-label="結束日期" class="fld" value="' + b + '"></div>' + (help || '') + '</div>';
+  }
+
+  function sheet(f) {
+    var b = '';
+    if (f.form) {
+      b = alertBox('err', 'alertC', '<p class="t-strong">有 2 個地方需要修正才能送出</p><ul style="margin-top:2px;padding-left:18px"><li><a href="#" data-focus="f-type">特休餘額不足</a></li><li><a href="#" data-focus="f-reason">事由為必填</a></li></ul>', '', 'alert') +
+        '<div class="field"><label for="f-type">假別<span class="req">*</span></label>' + sel('f-type', '特休').replace('class="fld"', 'class="fld fld-err"') + '<p class="err-msg">特休餘額不足：這次需要 8 天，目前剩 7.5 天。可改成 7.5 天特休加 0.5 天事假。</p></div>' +
+        dates('f-start', '2026/11/10', '2026/11/19', '<p class="help">共 8 個工作天（已扣除週末）</p>') +
+        '<div class="field"><label for="f-reason">事由<span class="req">*</span></label><textarea id="f-reason" class="fld fld-err" rows="3" placeholder="例如：家庭旅遊"></textarea><p class="err-msg">請填寫事由</p></div>' +
+        '<div class="field"><label for="f-proxy">職務代理人</label><input id="f-proxy" class="fld" value="陳柏宇"></div>';
+    } else if (f.upload) {
+      var files = [
+        ['診斷證明書.pdf', '1.2 MB · 已上傳', 'ok'],
+        ['收據.heic', '2.8 MB · 不支援 HEIC 格式，請轉成 JPG 或 PDF 後重新上傳', 'bad'],
+        ['住院證明_掃描.pdf', '18.4 MB · 超過 10 MB 上限，請壓縮後重新上傳', 'bad'],
+        ['處方箋.jpg', '640 KB · 上傳中斷，請重試', 'retry']
+      ];
+      b = '<div class="field"><label for="u-type">假別<span class="req">*</span></label>' + sel('u-type', '病假') + '</div>' + dates('u-start', '2026/10/26', '2026/10/29') +
+        '<div style="display:flex;flex-direction:column;gap:8px"><p>附件<span class="req">*</span></p><p class="help" style="margin-top:-6px">病假超過 3 天需附證明。PDF、JPG、PNG，單檔 10 MB 以內。</p>' +
+        '<button class="btn" style="height:56px;border-style:dashed;color:#3D444D">' + ic('upload') + '選擇檔案或拖曳到這裡</button>';
+      files.forEach(function (x) {
+        var ok = x[2] === 'ok';
+        b += '<div class="file' + (ok ? '' : ' bad') + '"><span class="alert-ic" style="color:' + (ok ? '#1A6B33' : '#B42318') + '">' + ic('file') + '</span>' +
+          '<div style="flex:1;min-width:0"><p class="ell">' + x[0] + '</p><p style="font-size:12px;color:' + (ok ? '#57606A' : '#B42318') + '">' + x[1] + '</p></div>' +
+          (x[2] === 'retry' ? '<button class="btn btn-sm btn-t">重試</button>' : '') + xBtn('移除 ' + x[0]) + '</div>';
+      });
+      b += '</div>';
+    } else {
+      b = '<div class="field"><label for="s-type">假別<span class="req">*</span></label>' + sel('s-type', '特休') + '</div>' + dates('s-start', '2026/12/21', '2026/12/23') +
+        '<div class="field"><label for="s-reason">事由<span class="req">*</span></label><textarea id="s-reason" class="fld" rows="3">年底家庭旅遊</textarea></div>';
+    }
+    return '<div class="overlay"></div><div class="sheet" role="dialog" aria-label="新增請假申請">' +
+      '<div class="dlg-h" style="border-bottom:1px solid #E3E5E8"><p>新增請假申請</p>' + xBtn() + '</div>' +
+      '<div class="sheet-b">' + b + '</div><div class="dlg-f"><button class="btn">取消</button><button class="btn btn-p">送出申請</button></div></div>';
+  }
+
+  function dialog(w, title, body, foot, closable) {
+    return '<div class="center"><div class="dlg" role="alertdialog" aria-label="' + title + '" style="width:' + w + 'px"><div class="dlg-h"><p>' + title + '</p>' + (closable ? xBtn() : '') + '</div>' +
+      '<div class="dlg-b">' + body + '</div><div class="dlg-f">' + foot + '</div></div></div>';
+  }
+
+  function overlays(f) {
+    var h = '';
+    if (f.sheet) h += sheet(f);
+    if (f.dim) h += '<div class="overlay" style="background:rgba(15,23,42,.45)"></div>';
+    if (f.e401) h += dialog(440, '登入已逾時', '<p>為了保護你的資料，閒置超過 30 分鐘需要重新登入。</p>' + alertBox('ok', 'check', '<span>你剛才填的內容已暫存，登入後會回到這個頁面。</span>'),
+      '<button class="btn">以其他帳號登入</button><button class="btn btn-p">重新登入</button>', false);
+    if (f.conflict) h += dialog(520, '這筆申請已被更新',
+      '<p>你在編輯 LV-2026-0431 的時候，<b class="t-strong">王志明（主管）</b>在 14:02 修改了這筆申請。請選擇要保留哪個版本。</p>' +
+      '<div class="diff"><div class="th"><span>欄位</span><span>你的版本</span><span>最新版本</span></div>' +
+      '<div><span style="color:#57606A">結束日期</span><span>11/05</span><span class="t-strong">11/04</span></div>' +
+      '<div><span style="color:#57606A">狀態</span><span>待審核</span><span class="t-strong">退回修改</span></div></div>' +
+      '<p style="color:#57606A">主管留言：「11/05 部門有季度會議，請改到 11/04 結束。」</p>',
+      '<button class="btn">仍以我的版本送出</button><button class="btn btn-p">載入最新版本</button>', true);
+    if (f.unsaved) h += dialog(420, '要捨棄這份申請嗎？', '<p>你填的內容還沒送出，離開後不會保留。</p>', '<button class="btn btn-d">捨棄並離開</button><button class="btn btn-p">繼續編輯</button>', true);
+    if (f.saveFail) h += '<div class="toast" role="alert"><span class="alert-ic" style="color:#B42318">' + ic('alertC') + '</span><div style="flex:1"><p class="t-strong">無法撤回 LV-2026-0431</p><p class="t-sub">伺服器暫時沒有回應，申請仍是「待審核」。</p></div><button class="btn btn-sm btn-t">重試</button>' + xBtn() + '</div>';
+    if (f.e429) h += '<div class="toast" role="status"><span class="alert-ic" style="color:#8F5A00">' + ic('alertT') + '</span><div style="flex:1"><p class="t-strong">匯出次數已達上限</p><p class="t-sub">每分鐘最多匯出 3 次，請 28 秒後再試。按鈕會在時間到時自動恢復。</p></div>' + xBtn() + '</div>';
+    return h;
+  }
+
+  function renderSim() {
+    var f = flags();
+    var cur = ALL.filter(function (x) { return x.id === state.sel; })[0];
+
+    document.querySelectorAll('#picks .pick').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(Number(b.getAttribute('data-pick')) === state.sel));
+    });
+
+    document.getElementById('info').innerHTML =
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px"><span class="num" style="font-weight:700;color:#57606A">' + cur.num + '</span>' +
+      '<h2 style="font-size:20px;line-height:1.3;font-weight:700">' + cur.title + '</h2><span class="tag tag-code">' + cur.code + '</span>' + lvTag(cur) +
+      '<span style="flex:1"></span><button class="btn btn-sm" data-act="prev">上一個</button><button class="btn btn-sm" data-act="next">下一個</button></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">' +
+      '<div><p style="margin-bottom:2px;font-size:12px;font-weight:700;color:#57606A">什麼時候會發生</p><p>' + cur.trigger + '</p></div>' +
+      '<div><p style="margin-bottom:2px;font-size:12px;font-weight:700;color:#57606A">UI 怎麼處理</p><p>' + cur.handling + (cur.id === 2 ? '（可以按「申請存取權限」試試）' : '') + '</p></div>' +
+      '<div><p style="margin-bottom:2px;font-size:12px;font-weight:700;color:#57606A">使用者下一步</p><p>' + cur.next + '</p></div></div>';
+
+    var inner = '';
+    if (f.app) {
+      inner = '<div style="height:100%;display:flex;flex-direction:column">' + banners(f) +
+        '<div style="flex:1;min-height:0;display:flex">' + sidebar(f) +
+        '<div style="flex:1;min-width:0;display:flex;flex-direction:column">' + pageHeader(f) +
+        '<div style="flex:1;min-height:0;overflow-y:auto">' + (f.list ? listPage(f) : fullContent(f)) + '</div>' +
+        (f.batch ? '<div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid #E3E5E8;background:#FFFFFF">' +
+          '<button class="btn btn-t btn-i" aria-label="取消選取">' + ic('x') + '</button><span class="t-strong num">已選 2 筆</span>' +
+          '<span style="width:1px;height:24px;background:#E3E5E8;margin:0 4px"></span><button class="btn">重試撤回</button><button class="btn">匯出</button></div>' : '') +
+        '</div></div></div>';
+    } else {
+      inner = f.e503 ? maintenance() : sso();
+    }
+    document.getElementById('frame').innerHTML =
+      '<div class="frame-scroll"><div class="frame-inner">' + inner + '</div></div>' + overlays(f);
+  }
+
+  function select(id) {
+    state.sel = id;
+    state.requested = false;
+    renderSim();
+    if (location.hash !== '#sim/' + id) history.replaceState(null, '', '#sim/' + id);
+  }
+
+  /* ---------- routing ---------- */
+  function route() {
+    var m = /^#sim(?:\/(\d+))?$/.exec(location.hash);
+    var isSim = !!m;
+    document.getElementById('view-list').hidden = isSim;
+    document.getElementById('view-sim').hidden = !isSim;
+    document.getElementById('tab-list').setAttribute('aria-selected', String(!isSim));
+    document.getElementById('tab-sim').setAttribute('aria-selected', String(isSim));
+    if (isSim) {
+      var id = m[1] ? Math.min(23, Math.max(1, parseInt(m[1], 10))) : state.sel;
+      if (id !== state.sel) { state.sel = id; state.requested = false; }
+      renderSim();
+    }
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-pick],[data-act],[data-focus]');
+    if (!t) {
+      // keep mock links/buttons inside the frame from navigating
+      if (e.target.closest('#frame a[href="#"]')) e.preventDefault();
+      return;
+    }
+    if (t.hasAttribute('data-pick')) return select(Number(t.getAttribute('data-pick')));
+    if (t.hasAttribute('data-focus')) {
+      e.preventDefault();
+      var el = document.getElementById(t.getAttribute('data-focus'));
+      if (el) el.focus();
+      return;
+    }
+    var a = t.getAttribute('data-act');
+    if (a === 'prev') select(state.sel > 1 ? state.sel - 1 : 23);
+    else if (a === 'next') select(state.sel < 23 ? state.sel + 1 : 1);
+    else if (a === 'request') { state.requested = true; renderSim(); }
+    else if (a === 'copy') {
+      var done = function () { var s = t.querySelector('span'); if (s) s.textContent = '已複製'; };
+      if (navigator.clipboard) navigator.clipboard.writeText('ERR-7F3A-29C1').then(done, done); else done();
+    }
+  });
+  window.addEventListener('hashchange', route);
+
+  renderList();
+  renderPicks();
+  route();
+})();
+</script>
+</body>
+</html>
